@@ -22,7 +22,7 @@ IPOLB    = 0x11
 GPINTENB = 0x12
 DEFVALB  = 0x13
 INTCONB  = 0x14
-IOCON    = 0x15  # yes, a duplicate! It's convenient not to have to test for IOCON
+IOCON    = 0x15  # yes, a duplicate!  So's not to have to test for IOCON
 GPPUB    = 0x16
 INTFB    = 0x17
 INTCAPB  = 0x18
@@ -32,6 +32,7 @@ CTL_REG_BANK_0 = [
     'IODIRA', 'IODIRB', 'IPOLA', 'IPOLB', 'GPINTENA', 'GPINTENB', 'DEFVALA', 'DEFVALB',
     'INTCONA', 'INTCONB', 'IOCON', 'IOCON', 'GPPUA', 'GPPUB', 'INTFA', 'INTFB',
     'INTCAPA', 'INTCAPB', 'GPIOA', 'GPIOB', 'OLATA', 'OLATB', ]
+# We aren't actually using BANK0 now so above can be deleted to save filespace.
 
 CTL_REG_BANK_1 = [
     'IODIRA', 'IPOLA', 'GPINTENA', 'DEFVALA', 'INTCONA',  'IOCON', 'GPPUA', 'INTFA',
@@ -40,7 +41,6 @@ CTL_REG_BANK_1 = [
     'INTCAPB', 'GPIOB', 'OLATB', ]
 
 # Pin Masks for programming unitary pins
-
 PIN0 = 0x01
 PIN1 = 0x02
 PIN2 = 0x04
@@ -51,10 +51,8 @@ PIN6 = 0x40
 PIN7 = 0x80
 
 # sugar
-
 HIGH = 0xff
 LOW = 0x00
-
 INPUT = 0xff
 OUTPUT = 0x00
 
@@ -175,8 +173,8 @@ class MCP23017:
 ## Interrupt Methods ##
 
 
-#     def set_interrupt(self, gpio, enabled):
-#         
+     def set_interrupt(self, gpio, enabled):
+         _register_bit(self, pin_mask, reg, state=LOW)
 # 
 #     def set_interrupt_mirror(self, enable):
 #
@@ -192,7 +190,7 @@ class MCP23017:
 # 
 #     
 
-###            <--- CUT HERE to remove surplus code --->
+###            <--- CUT ON THIS LINE to remove surplus code --->
 
 ## Debug Methods ##
 
@@ -233,19 +231,17 @@ if __name__ == "__main__":
     ic2.pin_mode(PIN7, GPIOA, OUTPUT)
     
 # running LED test on both ports
-    COMMON_ANODE = True  # LEDstrip common connected to Vcc (sink currents are higher)
-    
     for p in range(8):
         st = True
         for _ in range(20):
-            sleep_ms(250)
+            sleep_ms(100)
             ic2._register_bit( 1<<p, GPIOA, st)
             ic2._register_bit( 1<<p, GPIOB, not st)
             st =  not st
     
     ic2.prnregs()
     
-    ic1.set_all_input()
+#   ic1.set_all_input()
 
 
 
