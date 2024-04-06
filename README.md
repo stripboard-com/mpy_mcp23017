@@ -1,0 +1,1 @@
+A simple and compact Micropython Driver for the Microchip MCP23017.  I'm currently testing the interrupt methods on an ESP32 WROOM and will update the published work ASAP.  My current usage of MCP23017's are as IC pin drivers for a tester.
