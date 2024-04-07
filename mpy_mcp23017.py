@@ -22,7 +22,7 @@ IPOLB    = 0x11
 GPINTENB = 0x12
 DEFVALB  = 0x13
 INTCONB  = 0x14
-IOCON    = 0x15  # yes, a duplicate! It's convenient not to have to test for IOCON
+IOCON    = 0x15  # yes, a duplicate!  So's not to have to test for IOCON
 GPPUB    = 0x16
 INTFB    = 0x17
 INTCAPB  = 0x18
@@ -32,6 +32,7 @@ CTL_REG_BANK_0 = [
     'IODIRA', 'IODIRB', 'IPOLA', 'IPOLB', 'GPINTENA', 'GPINTENB', 'DEFVALA', 'DEFVALB',
     'INTCONA', 'INTCONB', 'IOCON', 'IOCON', 'GPPUA', 'GPPUB', 'INTFA', 'INTFB',
     'INTCAPA', 'INTCAPB', 'GPIOA', 'GPIOB', 'OLATA', 'OLATB', ]
+# We aren't actually using BANK0 now so above can be deleted to save filespace.
 
 CTL_REG_BANK_1 = [
     'IODIRA', 'IPOLA', 'GPINTENA', 'DEFVALA', 'INTCONA',  'IOCON', 'GPPUA', 'INTFA',
@@ -40,7 +41,6 @@ CTL_REG_BANK_1 = [
     'INTCAPB', 'GPIOB', 'OLATB', ]
 
 # Pin Masks for programming unitary pins
-
 PIN0 = 0x01
 PIN1 = 0x02
 PIN2 = 0x04
@@ -51,17 +51,15 @@ PIN6 = 0x40
 PIN7 = 0x80
 
 # sugar
-
 HIGH = 0xff
 LOW = 0x00
-
 INPUT = 0xff
 OUTPUT = 0x00
 
 
 class MCP23017:
     """
-    Micropython ESP32 Driver for the Microchip MCP23017
+    A simple and compact Micropython ESP32 Driver for the Microchip MCP23017
     
     IOCON (0x0a) = BANK | MIRROR | SEQOP  | DISSLW | HAEN | ODR | INTPOL | - |
     Pass in a pre-existing I2C object reference (which could be shared with another chip).
@@ -88,7 +86,7 @@ class MCP23017:
         self.write_reg( register=0xa, value= iocon | 0xa0)  # hit BANK and SEQOP flags to stop address increments
         # everything now in bank 1 with no hairy incrementing or toggling going on
         
-## Utility Methods
+## Utility Methods ##
 
     def regstr_to_byte(self, regstr ) -> int:
         """
@@ -111,15 +109,11 @@ class MCP23017:
         
     def _register_bit(self, pin_mask, reg, state=LOW):
         """
-        Sets a individual bit of a specified register
-        
-       ****TODO 
-        Usage: <ic>.pin_mode( GPB6 | GPB7, GPIOA, mode=INPUT) i.e. or the pin
-        values in the first parameter - which you CAN'T mix between ports.
+        Sets a individual bit of specified register.
+        Returns pin_mask of 0 on failure
         """
         if reg <= OLATB:     # last register of BANK1
             self.oldval = self.read_reg( reg)
-    #        print(hex(self.oldval))
             if state == LOW:
                 self.newval = self.oldval & (pin_mask ^ 0xff)   # because ~pin_mask sign extends!!!
             else:
@@ -129,7 +123,7 @@ class MCP23017:
             sys.stderr.write("_register_bit(): invalid register\n")
         return pin_mask
         
-# Byte-wide Methods
+## Byte-wide Methods ##
     
     def write_reg(self, register, value):
         i2c.writeto( self.ic_addr, bytearray([register, value]) )
@@ -155,7 +149,7 @@ class MCP23017:
         else:
             self.write_reg( register=0x10, value=OUTPUT)
             
-### Individual Pin Methods
+## Individual Pin Methods ##
 
     def pin_mode(self, pin_mask, port, state=OUTPUT):
         """
@@ -176,103 +170,42 @@ class MCP23017:
             sys.stderr.write("pin_mode(): must specify GPIOA or GPIOB!\n")
         return pin_mask
         
-# Interrupt Methods
+## Interrupt Methods ##
 
 
-#     def set_interrupt(self, gpio, enabled):
-#         """
-#         Enables or disables the interrupt of a given GPIO
-#         :param gpio: the GPIO where the interrupt needs to be set, this needs to be one of GPAn or GPBn constants
-#         :param enabled: enable or disable the interrupt
-#         """
-#         pair = self.get_offset_gpio_tuple([GPINTENA, GPINTENB], gpio)
-#         self.set_bit_enabled(pair[0], pair[1], enabled)
-# 
-#     def set_all_interrupt(self, enabled):
-#         """
-#         Enables or disables the interrupt of a all GPIOs
-#         :param enabled: enable or disable the interrupt
-#         """
-#         self.i2c.write_to(self.address, GPINTENA, 0xFF if enabled else 0x00)
-#         self.i2c.write_to(self.address, GPINTENB, 0xFF if enabled else 0x00)
+     def set_interrupt(self, gpio, enabled):
+         _register_bit(self, pin_mask, reg, state=LOW)
 # 
 #     def set_interrupt_mirror(self, enable):
-#         """
-#         Enables or disables the interrupt mirroring
-#         :param enable: enable or disable the interrupt mirroring
-#         """
-#         self.set_bit_enabled(IOCONA, MIRROR_BIT, enable)
-#         self.set_bit_enabled(IOCONB, MIRROR_BIT, enable)
-# 
+#
+#
 #     def read_interrupt_captures(self):
-#         """
-#         Reads the interrupt captured register. It captures the GPIO port value at the time the interrupt occurred.
-#         :return: a tuple of the INTCAPA and INTCAPB interrupt capture as a list of bit string
-#         """
-#         return (self._get_list_of_interrupted_values_from(INTCAPA),
-#                 self._get_list_of_interrupted_values_from(INTCAPB))
-# 
+#
+#
 #     def _get_list_of_interrupted_values_from(self, offset):
-#         list = []
-#         interrupted = self.i2c.read_from(self.address, offset)
-#         bits = '{0:08b}'.format(interrupted)
-#         for i in reversed(range(8)):
-#             list.append(bits[i])
-# 
-#         return list
+#
 # 
 #     def read_interrupt_flags(self):
-#         """
-#         Reads the interrupt flag which reflects the interrupt condition. A set bit indicates that the associated pin caused the interrupt.
-#         :return: a tuple of the INTFA and INTFB interrupt flags as list of bit string
-#         """
-#         return (self._read_interrupt_flags_from(INTFA),
-#                 self._read_interrupt_flags_from(INTFB))
-# 
-#     def _read_interrupt_flags_from(self, offset):
-#         list = []
-#         interrupted = self.i2c.read_from(self.address, offset)
-#         bits = '{0:08b}'.format(interrupted)
-#         for i in reversed(range(8)):
-#             list.append(bits[i])
-# 
-#         return list
-# 
-#      
-#     def set_bit_enabled(self, offset, gpio, enable):
-#         print(offset)
-#         print(gpio)
-#         print(enable)
 #         
-#         print("reading prior")
-#         print(self.ic_addr)
-#         print(offset)
-#         
-#         stateBefore = self.i2c.readfrom(self.ic_addr, offset)
-#         print(stateBefore)
-#         
-#         value = (stateBefore | self.bitmask(gpio)) if enable else (stateBefore & ~self.bitmask(gpio))
-#         self.i2c.writeto(self.ic_addr, offset, value)
 # 
-#     def bitmask(self, gpio):
-#         return 1 << (gpio % 8)
+#     
 
-# Debug Methods
+###            <--- CUT ON THIS LINE to remove surplus code --->
+
+## Debug Methods ##
 
     def prnregs(self):
-    #     sleep_ms(1000)
-    #     rd_iodira = i2c.readfrom(32, 1, 0)
-    #     sleep_ms(5000)
         if self._mode == 0:
             self.regs = CTL_REG_BANK_0
         else:
             self.regs = CTL_REG_BANK_1
+        print('-'*20)
         for self.reg in self.regs:    # registers according to mode
             if self.reg == '-':
                 continue
             reg_byte = self.regs.index(self.reg)
             print( "{} = {}".format( self.reg, hex(self.read_reg(reg_byte)) ) )
-
+        print('-'*20)
 
           
 if __name__ == "__main__":
@@ -291,39 +224,24 @@ if __name__ == "__main__":
     ic1.write_reg( register=ic1.regstr_to_byte("GPIOB"), value=0x52 )  # alternatice write syntax
     ic2.write_reg( register=ic2.regstr_to_byte("GPIOB"), value=0x47 )
 
-    print('-'*20)
-#    ic1.prnregs()
-    print("<><><><><><><><><>")
-    ic2.prnregs()
-    print('-'*20)
+    ic1.prnregs()
     
-#     sleep_ms(500)
-#     ic2.pin_mode(PIN7, GPIOA, INPUT)
-#     sleep_ms(500)
-#     ic2.pin_mode(PIN7, GPIOA, OUTPUT)
-#     sleep_ms(500)
-#     ic2.pin_mode(PIN7, GPIOA, INPUT)
-#     sleep_ms(500)
-#     ic2.pin_mode(PIN7, GPIOA, OUTPUT)
-
+    ic2.pin_mode(PIN7, GPIOA, INPUT)
+    sleep_ms(500)
+    ic2.pin_mode(PIN7, GPIOA, OUTPUT)
     
-#     ic2.register_bit( PIN5, OLATB, LOW)
-#     ic2.register_bit( PIN6, OLATB, LOW)
-#     ic2.register_bit( PIN7, OLATB, LOW)
-#     ic2.register_bit( PIN4, OLATB, LOW)
-    
+# running LED test on both ports
     for p in range(8):
         st = True
         for _ in range(20):
-            sleep_ms(250)
+            sleep_ms(100)
             ic2._register_bit( 1<<p, GPIOA, st)
             ic2._register_bit( 1<<p, GPIOB, not st)
             st =  not st
-    #        print(hex(st))
     
     ic2.prnregs()
     
-    ic1.set_all_input()
+#   ic1.set_all_input()
 
 
 
